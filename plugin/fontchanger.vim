@@ -3,7 +3,7 @@
 
 "GLOBAL VARIABLES:"
 ""let g:FontChangerList="default"
-let g:FontChangerList=$HOME . "/.vim/fonts/nicefonts.vim"
+let g:FontChangerList=$HOME . "/.vim/nicefonts.vim"
 ""let g:FontDefault='Source Code Pro Medium\, 14'
 ""let g:FontDefault='Liberation Mono\, 14'
 
@@ -11,7 +11,13 @@ let g:FontChangerList=$HOME . "/.vim/fonts/nicefonts.vim"
 let s:minfontsize = 6
 let s:maxfontsize = 25
 
-"CHANGE FONT SIZE BY AMOUNT"
+"OPEN GUI FONT MENU:"
+function! fontchanger#FontGuiSelect()
+	set guifont=*
+endf
+""call fontchanger#FontGuiSelect()
+
+"CHANGE FONT SIZE BY AMOUNT:
 function! fontchanger#SizeChanger(amount)
 	if has("gui_gtk2") && has("gui_running")
 		"pattern to get current font size or font name"
@@ -30,11 +36,6 @@ endfunction
 ""call fontchanger#SizeChanger(1)
 ""call fontchanger#SizeChanger(-1)
 
-"OPEN GUI FONT MENU:"
-function! fontchanger#FontGuiSelect()
-	set guifont=*
-endf
-""call fontchanger#FontGuiSelect()
 
 "OBTAIN ALL MONOSPACE FONTS WITH DECLARED SPACING:
 function! fontchanger#FontListMono()
@@ -53,37 +54,25 @@ endfunction
 ""echo fontchanger#FontListMono()
 
 "CHECK IF FONT SPECIFIED IN FAVORITE LIST ARE AVAILABLE AND RETURN LIST OF AVAIABLE FAVORITE FONTS:"
-function! fontchanger#FontFavValidList()
+function! fontchanger#FontFavValidator()
 	let l:defaultFontList=fontchanger#FontListMono()
 	let l:favListValid=[]
-	if g:FontChangerList ==# "default"
-		let l:favListValid=l:defaultFontList
-	else
-		if filereadable(g:FontChangerList)
-			let l:favlist=systemlist("cat " . g:FontChangerList)
-			let l:favListValid=array#ListsConjunction(l:defaultFontList,l:favlist)
-			if len(l:favListValid) > 0
-				echom "Number of fonts valid:" len(l:favListValid)
-			else
-				echoerr "No fonts specified in favorite list avaiable."
+	if filereadable(g:FontChangerList)
+		let l:favlist=systemlist("cat " . g:FontChangerList)
+		let l:favListValid=array#ListsConjunction(l:defaultFontList,l:favlist)
+		if len(l:favListValid) > 0
+			echom "Number of fonts valid:" len(l:favListValid)
+		elseif len(l:favListValid) = 0
+				echoerr "No font specified in favorite list is avaiable."
 				echoerr "Reverting to default font list"
 				let l:fvaListValid=l:defaultFontList
-			endif
 		endif
 	endif
 	return l:favListValid
 endfunction
-""echo fontchanger#FontFavValidList()
+""echo fontchanger#FontFavValidator()
 
-"# CYCLE FONTS IN LIST"
-"Pttern to extract current font name
-""let s:pattsize='.* \(\d*\)'
-""let s:pattfont='\(.*\)\(\\, \d*\)'
-"""Test patterns:
-"let test_fontname='Anonymous Pro Mono\, 10'
-""echo substitute(test_fontname,s:pattsize,'\1','') . 'Hello'
-""echo substitute(test_fontname,s:pattfont,'\1','') . 'Hello'
-
+""EXTRACT CURRENT FONT SIZE:
 function! fontchanger#ExtractCurSize()
 		"Extract current font size"
 		let l:pattsize='.* \(\d*\)'
@@ -92,20 +81,22 @@ function! fontchanger#ExtractCurSize()
 endfunction
 ""echo fontchanger#ExtractCurSize()
 
+""EXTRACT CURRENT FONT NAME:
 function! fontchanger#ExtractCurFont()
 		"Current font name"
 		let l:pattfont='\(.*\)\(\\, \d*\)'
 		let l:curfont = substitute(&guifont, l:pattfont, '\1', '')
 		return l:curfont
 endfunction
-""echo fontchanger#ExtractCurFont() . " Hello"
+""echo fontchanger#ExtractCurFont()
 
+""CYCLE FONTS IN LIST:
 function! fontchanger#FontCycler(amount)
 	if has("gui_gtk2") && has("gui_running")
 		let l:cursize=fontchanger#ExtractCurSize()
 		let l:curfont=fontchanger#ExtractCurFont()
 		"Check current font index in font list"
-		let l:fontList=fontchanger#FontFavValidList()
+		let l:fontList=fontchanger#FontFavValidator()
 		let l:idx=index(l:fontList,l:curfont)
 		if (l:idx == -1)
 			"Start cycling at 0 index"
@@ -133,38 +124,42 @@ endfunction
 ""call fontchanger#FontCycler(1)
 ""call fontchanger#FontCycler(-1)
 
-"# SHOW MENU BUFFER WITH LIST OF FONTS PARSED FROM SYSTEM"
+" SHOW MENU BUFFER WITH LIST OF FONTS PARSED FROM SYSTEM:"
 function! fontchanger#FontListMenu(buf_name,fontlist)
 	"Buffer window number"
-	let l:bfnr=bufwinnr(a:buf_name)
-	if  l:bfnr > 0
-	"If buffer is visible, go to it"
-		exe l:bfnr . "wincmd w"
-	elseif l:bfnr == winnr()
-		echo "already selected"
-	else
-		"Create new buffer"
-		""exe 'new' a:buf_name
-		exe 'sp ' . a:buf_name
-		"Buffer settings"
-		"? not sure if to use nowrite or nofile (difference?)"
-		:setlocal buftype=nofile
-		:setlocal bufhidden=hide
-		:setlocal noswapfile
-		nnoremap <buffer> <CR> :silent call FontSelectedChange()<CR>
-		nnoremap <buffer> f :silent call FontNiceListAdd()<CR>
+		call buffer#GoToScratch(a:buf_name,10)
+
+	if filereadable(g:FontChangerList)
+		let l:favlist=systemlist("cat " . g:FontChangerList)
+		let l:j=10000
+		for l:i in l:favlist
+			let l:j+=1
+			let l:hname="DynFont" . l:j
+			let l:hicommand='highlight ' . l:hname . ' guifg=#00C800'
+			let l:mcommand='syn match ' . l:hname . ' ' . shellescape('^' . l:i . '$')
+			exe l:hicommand
+			exe l:mcommand
+		endfor
+	endif
+
+
+		nnoremap <buffer> <CR> :silent call fontchanger#FontSelectedChange()<CR>
+		nnoremap <silent><buffer> f :call fontchanger#FontFav()<CR>
+		nnoremap <buffer> d :call fontchanger#FontSell()<CR>
 		nnoremap <buffer> q :bw<CR>
 		exe "lcd " . $HOME . "/.vim/fonts/"
-	endif
 		"delete content of buffer"
 		set ma
 		%d_
 		silent 0put =a:fontlist
 		set noma
 endfunction
-""call fontchanger#FontListMenu("_FotnMonoMenu_",fontchanger#FontFavValidList())
+""call fontchanger#FontListMenu("_FotnMonoMenu_",fontchanger#FontFavValidator())
 
-function! FontSelectedChange()
+command! FontMenuAll call fontchanger#FontListMenu("_FontMonoMenu_",fontchanger#FontListMono())
+command! FontMenuFav call fontchanger#FontListMenu("_FontFacMenu_",fontchanger#FontFavValidator())
+
+function! fontchanger#FontSelectedChange()
 		let l:selectedFont=getline('.')
 		let l:pattsize='\(.* \)*\(\d*\)$'
 		let l:cursize=substitute(&gfn,l:pattsize,'\2','')
@@ -172,18 +167,44 @@ function! FontSelectedChange()
 		let &gfn=l:curface
 endfunction
 
-function! FontNiceListAdd()
+""ADD SELECTED FONT TO FAVORITE LIST:
+function! fontchanger#FontFav()
 	let l:nicefonts=$HOME . "/.vim/fonts/nicefonts.vim"
-	if 	filereadable(l:nicefonts)
+	if 	filereadable(g:FontChangerList)
 		let l:selectedFont=getline('.')
-		let l:nfl=systemlist("cat " . l:nicefonts)
+		let l:nfl=systemlist("cat " . g:FontChangerList)
 		if matchstr(l:nfl,l:selectedFont) == l:selectedFont
 			echom "Already favorited"
 		else
-			exe "!echo" l:selectedFont ">>" l:nicefonts
+			silent exe "!echo" l:selectedFont ">>" g:FontChangerList
 		endif
 	else
-		!mkdir -p ~/.vim/fonts/
-		exe "!touch " . l:nicefonts
+		silent exe "!touch " . g:FontChangerList
+		silent exe "!echo" getline('.') ">>" g:FontChangerList
+	endif
+	let l:hname='DynFont' . line('.')
+	let l:hicommand='highlight ' . l:hname . ' guifg=#00C800'
+	let l:mcommand='syn match ' . l:hname . ' ' . shellescape('^' . getline('.') . '$')
+	exe l:hicommand
+	exe l:mcommand
+endfunction
+
+""DELETE SELECTED FONT FROM FAVORITE LIST:
+function! fontchanger#FontSell()
+	if filereadable(g:FontChangerList)
+		let l:selectedFont=getline('.')
+		let l:comd='sed -i "/' . l:selectedFont . "/d\" "
+		let l:comd.=l:comd . g:FontChangerList
+		""echo l:comd
+		call systemlist(l:comd)
+		""set ma
+		""normal! dd
+		""set noma
+		let l:hname='DynFontB' . line('.')
+		let l:hicommand='highlight ' . l:hname . ' guifg=#C00000'
+		let l:mcommand='syn match ' . l:hname . ' ' . shellescape('^' . getline('.') . '$')
+		exe l:hicommand
+		exe l:mcommand
 	endif
 endfunction
+""echo fontchanger#FontSell()
