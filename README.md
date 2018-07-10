@@ -11,7 +11,12 @@
 ** aesthetics
 
 # Dependency
-linux
+* system dependency
+linux/awk
+linux/fc-list
+linux/sort
+linux/uniq
+* plugin dependency
 triorg/vim-array
 triorg/vim-buffer
 
