@@ -19,7 +19,7 @@ endf
 
 "CHANGE FONT SIZE BY AMOUNT:
 function! fontchanger#SizeChanger(amount)
-	if has("gui_gtk2") && has("gui_running")
+	if (has("gui_gtk2") || has("gui_gtk3")) && has("gui_running")
 		"pattern to get current font size or font name"
 		let l:pattsize='\(.* \)*\(\d*\)$'
 		let l:cursize = substitute(&guifont, l:pattsize, '\2', '')
